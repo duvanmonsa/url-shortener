@@ -26,7 +26,7 @@ const App = (props) => {
         let result = text;
         const { data } = await axios.post(`${process.env.REACT_APP_API_URL}`, { urls: getUrls(text) });
         data.forEach(urlData => {
-          result = result.replace(urlData.original_url, `<a href="${urlData.short_url}">${urlData.short_url}</a>`)
+          result = result.replace(urlData.original_url, `<a href="${urlData.short_url}" target="_blank">${urlData.short_url}</a>`)
         })
         setResponse(result);
       }
