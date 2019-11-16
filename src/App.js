@@ -1,47 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import { Form, Row, Col, Input, Button } from 'antd';
+
 import './App.css';
 
-const App = () => {
-  const [textValue, setTextValue] = useState();
+
+const { TextArea } = Input;
+
+const getUrls = (text) => {
+  const expression = /(?:(?:https?|ftp):\/\/|\b(?:[a-z\d]+\.))(?:(?:[^\s()<>]+|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))?\))+(?:\((?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))?\)|[^\s`!()[\]{};:'".,<>?«»“”‘’]))?/ig;
+  const regex = new RegExp(expression);
+  return text.match(regex);
+}
+
+const App = (props) => {
   const [response, setResponse] = useState();
-  const [error, setError] = useState();
+  const [copySuccess, setCopySuccess] = useState(false);
+  const refResult = useRef(null);
 
-  const sentData = async () => {
-    const expression = /(?:(?:https?|ftp):\/\/|\b(?:[a-z\d]+\.))(?:(?:[^\s()<>]+|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))?\))+(?:\((?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))?\)|[^\s`!()[\]{};:'".,<>?«»“”‘’]))?/ig;
-    const regex = new RegExp(expression);
-    const urls = textValue.match(regex);
-    if (urls.length > 0) {
-      setError(false);
-      let textResult = textValue;
-      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/shortener`, { urls });
-      data.forEach(urlData => {
-        textResult = textResult.replace(urlData.original_url, urlData.short_url)
-      })
-      setResponse(textResult);
-    } else {
-      setError(true);
+  const handleSubmit = e => {
+    setCopySuccess(false)
+    e.preventDefault();
+    props.form.validateFields(async (err, { text }) => {
+      if (!err) {
+        let result = text;
+        const { data } = await axios.post(`${process.env.REACT_APP_API_URL}`, { urls: getUrls(text) });
+        data.forEach(urlData => {
+          result = result.replace(urlData.original_url, urlData.short_url)
+        })
+        setResponse(result);
+      }
+    });
+  };
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(response)
+    setCopySuccess(true)
+  };
+
+  const validateUrls = (rule, value, callback) => {
+    if (value && getUrls(value) === null) {
+      callback('At least one url must be inside the text')
     }
-
+    callback();
   }
+
+  const { getFieldDecorator } = props.form;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <p>
-          Short urls in your text
-        </p>
-        {error && (
-          <div>At least one url must be inside the text</div>)}
-        <textarea value={textValue} onChange={(e) => setTextValue(e.target.value)} rows="10" cols="100" />
-        <button onClick={sentData}>Send</button>
+    <Row type="flex" justify="center" className="App">
+      <Col span={24}>
+        <h1>Shor urls for any text</h1>
+        <Form onSubmit={handleSubmit}>
+          <Form.Item>
+            {getFieldDecorator('text', {
+              rules: [
+                { required: true, message: 'Please input the text!' },
+                {
+                  validator: validateUrls
+                }
+              ],
+            })(
+              <TextArea rows={5} />,
+            )}
+          </Form.Item>
+          <Form.Item >
+            <Button type="primary" size="large" htmlType="submit">
+              Short Links
+          </Button>
+          </Form.Item>
+        </Form>
         {response && (
-          <div>
-            {response}
+          <div className="response">
+            <TextArea ref={refResult} rows={5} value={response} />
+            <Button type={copySuccess ? "dashed" : "primary"} size="primary" onClick={copyToClipboard} className={copySuccess && 'copied'}>
+              {copySuccess ? 'Copied' : 'Copy'}
+            </Button>
           </div>
         )}
-      </header>
-    </div>
+      </Col>
+    </Row>
   );
 }
 
-export default App;
+export default Form.create({ name: 'shortUrl' })(App);
