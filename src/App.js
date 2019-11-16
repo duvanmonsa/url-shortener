@@ -26,7 +26,7 @@ const App = (props) => {
         let result = text;
         const { data } = await axios.post(`${process.env.REACT_APP_API_URL}`, { urls: getUrls(text) });
         data.forEach(urlData => {
-          result = result.replace(urlData.original_url, urlData.short_url)
+          result = result.replace(urlData.original_url, `<a href="${urlData.short_url}">${urlData.short_url}</a>`)
         })
         setResponse(result);
       }
@@ -71,7 +71,8 @@ const App = (props) => {
         </Form>
         {response && (
           <div className="response">
-            <TextArea ref={refResult} rows={5} value={response} />
+            <div ref={refResult} dangerouslySetInnerHTML={{ __html: response }} />
+            {/* <TextArea ref={refResult} rows={5} value={response} /> */}
             <Button type={copySuccess ? "dashed" : "primary"} size="primary" onClick={copyToClipboard} className={copySuccess && 'copied'}>
               {copySuccess ? 'Copied' : 'Copy'}
             </Button>
